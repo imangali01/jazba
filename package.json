@@ -5,6 +5,10 @@
   "version": "0.0.8",
   "publisher": "bmg",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imangali01/jazba.git"
+  },
   "icon": "media/logo.png",
   "engines": {
     "vscode": "^1.90.0"

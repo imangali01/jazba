@@ -43,6 +43,31 @@
 > Кнопка внутри самого поля ввода (`scm/inputBox`) — proposed API VS Code и недоступна
 > для обычной установки, поэтому используется `scm/title`.
 
+## 📸 Как это выглядит
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/01-wand-button.png" alt="Кнопка-палочка в панели SCM" /><br />
+      <sub><b>1.</b> Палочка в тулбаре «Система управления версиями»</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/04-result.png" alt="Сгенерированное сообщение коммита" /><br />
+      <sub><b>2.</b> Готовое сообщение в поле коммита</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/05-activity-panel.png" alt="Панель Jazba в Activity Bar" /><br />
+      <sub><b>3.</b> Панель Jazba: язык, стиль и длина в один клик</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/02-command-palette.png" alt="Команды Jazba в палитре" /><br />
+      <sub><b>4.</b> Команды в палитре (<code>Ctrl+Shift+P</code>)</sub>
+    </td>
+  </tr>
+</table>
+
 ## ⚙️ Настройки
 
 | Параметр | По умолчанию | Описание |
