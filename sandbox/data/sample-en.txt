@@ -1,0 +1,5 @@
+Sample English text
+===================
+
+The quick brown fox jumps over the lazy dog.
+Edit this file, stage it, and generate a commit message to test the extension.

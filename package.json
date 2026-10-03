@@ -1,0 +1,181 @@
+{
+  "name": "jazba",
+  "displayName": "Jazba",
+  "description": "Генерация сообщений git-коммитов через Claude на основе staged-изменений и стиля истории репозитория.",
+  "version": "0.0.8",
+  "publisher": "bmg",
+  "license": "MIT",
+  "icon": "media/logo.png",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Machine Learning",
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "jazba",
+          "title": "Jazba",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "jazba": [
+        {
+          "id": "jazba.controls",
+          "name": "Сообщение коммита"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "jazba.generate",
+        "title": "Сгенерировать сообщение коммита",
+        "category": "Jazba",
+        "icon": {
+          "light": "media/wand-light.svg",
+          "dark": "media/wand-dark.svg"
+        }
+      },
+      {
+        "command": "jazba.pickLanguage",
+        "title": "Выбрать язык сообщения",
+        "category": "Jazba"
+      },
+      {
+        "command": "jazba.pickStyle",
+        "title": "Выбрать стиль сообщения",
+        "category": "Jazba"
+      },
+      {
+        "command": "jazba.pickLength",
+        "title": "Выбрать длину сообщения",
+        "category": "Jazba"
+      },
+      {
+        "command": "jazba.openLog",
+        "title": "Открыть журнал",
+        "category": "Jazba"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "jazba.generate",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "jazba.generate"
+        },
+        {
+          "command": "jazba.pickLanguage"
+        },
+        {
+          "command": "jazba.pickStyle"
+        },
+        {
+          "command": "jazba.pickLength"
+        },
+        {
+          "command": "jazba.openLog"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Jazba",
+      "properties": {
+        "jazba.language": {
+          "type": "string",
+          "default": "russian",
+          "scope": "application",
+          "markdownDescription": "Язык сгенерированного сообщения. Распознаются `russian` и `english`; можно указать любое название языка (например `german`)."
+        },
+        "jazba.commitStyle": {
+          "type": "string",
+          "default": "auto",
+          "scope": "application",
+          "enum": ["auto", "conventional", "plain", "gitmoji", "detailed"],
+          "enumDescriptions": [
+            "Подстроиться под стиль истории репозитория",
+            "Conventional Commits: type(scope): описание",
+            "Простой императив без префиксов",
+            "С эмодзи в начале заголовка (gitmoji)",
+            "Развёрнутое сообщение с обязательным телом"
+          ],
+          "description": "Стиль генерируемого сообщения коммита."
+        },
+        "jazba.length": {
+          "type": "string",
+          "default": "medium",
+          "scope": "application",
+          "enum": ["short", "medium", "long"],
+          "enumDescriptions": [
+            "Только заголовок в одну строку",
+            "Заголовок + короткое тело (1–3 пункта)",
+            "Заголовок + развёрнутое тело"
+          ],
+          "description": "Длина генерируемого сообщения коммита."
+        },
+        "jazba.historyCount": {
+          "type": "number",
+          "default": 20,
+          "minimum": 0,
+          "description": "Сколько недавних коммитов брать как примеры стиля (примерно поровну от владельца репозитория и других авторов). 0 — не использовать историю."
+        },
+        "jazba.claudePath": {
+          "type": "string",
+          "default": "claude",
+          "markdownDescription": "Путь к CLI `claude`. По умолчанию берётся из `PATH`."
+        },
+        "jazba.claudeExtraArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Дополнительные аргументы CLI, например `[\"--model\", \"claude-sonnet-5\"]`."
+        },
+        "jazba.timeoutSeconds": {
+          "type": "number",
+          "default": 90,
+          "minimum": 5,
+          "description": "Через сколько секунд прервать генерацию и завершить процесс CLI."
+        },
+        "jazba.maxDiffChars": {
+          "type": "number",
+          "default": 4000,
+          "minimum": 500,
+          "description": "Предел длины тела диффа, передаваемого модели. Блок --stat отправляется целиком."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "logo": "node scripts/make-logo.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "vscode:prepublish": "node esbuild.js --production"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.24.0",
+    "jimp": "^1.6.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
