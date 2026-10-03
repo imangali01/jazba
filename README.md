@@ -1,25 +1,94 @@
+<div align="center">
+
+<img src="docs/banner.png" alt="Jazba" width="160" />
+
 # Jazba
 
-Расширение VS Code: генерирует текст git-коммита через Claude на основе staged-изменений
-и стиля сообщений в истории репозитория. Логотип — `media/logo.png`.
+**Магия для `git commit -m`** — расширение VS Code, которое пишет сообщения коммитов через Claude.
 
-## Разработка
+[![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A5%201.90-007ACC?logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Powered by Claude](https://img.shields.io/badge/powered%20by-Claude-D97757)](https://claude.com/claude-code)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+</div>
+
+---
+
+## ✨ Что умеет
+
+- 🪄 **Одна кнопка** — волшебная палочка в тулбаре панели «Система управления версиями» генерирует сообщение по staged-изменениям.
+- 🧠 **Учится на вашей истории** — берёт недавние коммиты (ваши и других авторов) как примеры стиля.
+- 🌍 **Любой язык** — русский, английский или любой другой (`german`, `french`, …).
+- 🎛️ **Стили на выбор** — Conventional Commits, gitmoji, простой императив, развёрнутое сообщение или автоопределение по истории.
+- 📏 **Длина под задачу** — от одной строки до заголовка с подробным телом.
+- 🗂️ **Панель Jazba** в Activity Bar — язык, стиль и длина переключаются в один клик.
+- 🔒 **Без лишних ключей** — использует уже авторизованный `claude` CLI.
+
+## 🚀 Быстрый старт
+
+1. Установите и авторизуйте [`claude` CLI](https://claude.com/claude-code) (он должен быть в `PATH`).
+2. Установите расширение из `.vsix`:
+   ```bash
+   npm install
+   npm run compile
+   npx vsce package
+   code --install-extension jazba-*.vsix
+   ```
+3. Сделайте `git add` нужных файлов.
+4. Нажмите 🪄 в тулбаре панели SCM или выполните **«Jazba: Сгенерировать сообщение коммита»** из палитры команд (`Ctrl+Shift+P`).
+
+Сообщение появится в поле ввода коммита — останется только проверить и закоммитить.
+
+> Кнопка внутри самого поля ввода (`scm/inputBox`) — proposed API VS Code и недоступна
+> для обычной установки, поэтому используется `scm/title`.
+
+## ⚙️ Настройки
+
+| Параметр | По умолчанию | Описание |
+|---|---|---|
+| `jazba.language` | `russian` | Язык сообщения (`russian`, `english` или любое название языка) |
+| `jazba.commitStyle` | `auto` | `auto` · `conventional` · `plain` · `gitmoji` · `detailed` |
+| `jazba.length` | `medium` | `short` (только заголовок) · `medium` · `long` |
+| `jazba.historyCount` | `20` | Сколько последних коммитов брать как примеры стиля (`0` — не использовать) |
+| `jazba.claudePath` | `claude` | Путь к CLI `claude` |
+| `jazba.claudeExtraArgs` | `[]` | Доп. аргументы CLI, например `["--model", "claude-sonnet-5-5"]` |
+| `jazba.timeoutSeconds` | `90` | Таймаут генерации |
+| `jazba.maxDiffChars` | `4000` | Предел длины тела диффа, передаваемого модели |
+
+## 🧩 Команды
+
+| Команда | Что делает |
+|---|---|
+| `Jazba: Сгенерировать сообщение коммита` | Генерирует сообщение по staged-изменениям |
+| `Jazba: Выбрать язык сообщения` | Быстрый выбор языка |
+| `Jazba: Выбрать стиль сообщения` | Быстрый выбор стиля |
+| `Jazba: Выбрать длину сообщения` | Быстрый выбор длины |
+| `Jazba: Открыть журнал` | Лог работы расширения |
+
+## 🛠️ Разработка
 
 ```bash
 npm install
 npm run compile      # сборка в dist/
-npm test             # юнит-тесты чистых функций
+npm run watch        # пересборка при изменениях
+npm run typecheck    # проверка типов
+npm test             # юнит-тесты
 ```
 
-Запуск dev-хоста: открыть папку в VS Code и нажать `F5` («Run Extension»).
-В открывшемся окне сделать `git add`, затем нажать кнопку-палочку в тулбаре
-панели «Система управления версиями» (верхняя строка, рядом с «Фиксация» и «⋯»)
-или выполнить команду «Jazba: Сгенерировать сообщение коммита» из палитры.
+Запуск dev-хоста: откройте папку в VS Code и нажмите `F5` («Run Extension»).
 
-> Кнопка внутри самого поля ввода (`scm/inputBox`) — proposed API VS Code и
-> недоступна для обычной установки расширения, поэтому используется `scm/title`.
+```
+src/
+├── extension.ts     # точка входа, команды
+├── claude.ts        # запуск claude CLI
+├── diff.ts          # подготовка диффа
+├── history.ts       # выборка примеров стиля из истории
+├── prompt.ts        # сборка промпта
+├── sanitize.ts      # очистка ответа модели
+└── controls*.ts     # панель в Activity Bar
+```
 
-## Требования
+## 📄 Лицензия
 
-Установленный и авторизованный `claude` CLI в `PATH` (тот же, что использует
-расширение Claude Code).
+[MIT](LICENSE)

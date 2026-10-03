@@ -9,6 +9,5 @@ esbuild.js
 tsconfig.json
 **/*.map
 **/*.ts
-magit.jpg
-jazba.png
+docs/**
 .gitignore
