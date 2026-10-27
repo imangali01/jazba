@@ -29,6 +29,7 @@ export function languageLabel(language: string): string {
 export function describeControlRows(state: ControlsState): ControlRow[] {
   return [
     { label: "Сгенерировать сообщение коммита", command: "jazba.generate", icon: "sparkle" },
+    { label: "Предложить имя ветки", command: "jazba.suggestBranch", icon: "git-branch" },
     { label: `Язык: ${languageLabel(state.language)}`, command: "jazba.pickLanguage", icon: "globe" },
     { label: `Стиль: ${styleLabel(state.style)}`, command: "jazba.pickStyle", icon: "symbol-color" },
     { label: `Длина: ${lengthLabel(state.length)}`, command: "jazba.pickLength", icon: "list-selection" },

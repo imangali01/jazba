@@ -1,11 +1,13 @@
 import * as vscode from "vscode";
 
+import { buildBranchPrompt, sanitizeBranchName } from "./branch";
 import { buildClaudeInvocation, ClaudeError, runClaude } from "./claude";
 import { readConfig } from "./config";
 import { ControlsProvider, pickLanguage, pickLength, pickStyle } from "./controls-view";
 import { truncateDiff } from "./diff";
 import { getGitAPI, type GitRepository } from "./git";
 import { buildPrompt } from "./prompt";
+import { branchExists, checkoutBranch, currentBranch, hasUpstream, listBranches, pull } from "./repo-branch";
 import { collectDiff, type DiffMode } from "./repo-diff";
 import { collectExamples } from "./repo-history";
 import { resolveRepository, type RepoHint } from "./repository";
@@ -22,6 +24,7 @@ export function activate(context: vscode.ExtensionContext): void {
     channel,
     vscode.window.registerTreeDataProvider("jazba.controls", controls),
     vscode.commands.registerCommand("jazba.generate", (hint?: RepoHint) => generate(hint)),
+    vscode.commands.registerCommand("jazba.suggestBranch", (hint?: RepoHint) => suggestBranch(hint)),
     vscode.commands.registerCommand("jazba.pickLanguage", () => pickLanguage(() => controls.refresh())),
     vscode.commands.registerCommand("jazba.pickStyle", () => pickStyle(() => controls.refresh())),
     vscode.commands.registerCommand("jazba.pickLength", () => pickLength(() => controls.refresh())),
@@ -39,6 +42,18 @@ export function deactivate(): void {
 }
 
 async function generate(hint: RepoHint | undefined): Promise<void> {
+  await withRepository(hint, run);
+}
+
+async function suggestBranch(hint: RepoHint | undefined): Promise<void> {
+  await withRepository(hint, runSuggestBranch);
+}
+
+/** Находит репозиторий для команды и показывает ошибки `action` пользователю. */
+async function withRepository(
+  hint: RepoHint | undefined,
+  action: (repository: GitRepository) => Promise<void>,
+): Promise<void> {
   const git = await getGitAPI();
   if (!git) {
     void vscode.window.showErrorMessage("Jazba: встроенное расширение Git недоступно.");
@@ -56,12 +71,21 @@ async function generate(hint: RepoHint | undefined): Promise<void> {
   }
 
   try {
-    await run(repository);
+    await action(repository);
   } catch (err) {
-    const message = err instanceof ClaudeError || err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     channel.appendLine(`ERROR: ${message}`);
     void vscode.window.showErrorMessage(`Jazba: ${message}`);
   }
+}
+
+/** Текст ошибки; для упавшего `git` предпочитает его stderr. */
+function errorMessage(err: unknown): string {
+  const stderr = (err as { stderr?: unknown } | undefined)?.stderr;
+  if (typeof stderr === "string" && stderr.trim()) {
+    return stderr.trim();
+  }
+  return err instanceof ClaudeError || err instanceof Error ? err.message : String(err);
 }
 
 async function run(repository: GitRepository): Promise<void> {
@@ -113,6 +137,89 @@ async function run(repository: GitRepository): Promise<void> {
   } else {
     void vscode.window.showWarningMessage("Jazba: модель вернула пустой ответ.");
   }
+}
+
+/**
+ * Предлагает имя ветки по staged-изменениям (как {@link run}) и ничего не меняет
+ * без подтверждения: «✓» — `git pull` (если есть upstream) и `git checkout -b`,
+ * «✗» — отказ.
+ */
+async function runSuggestBranch(repository: GitRepository): Promise<void> {
+  const cwd = repository.rootUri.fsPath;
+  const config = readConfig();
+
+  const diff = await resolveDiff(cwd);
+  if (!diff) {
+    return;
+  }
+
+  const current = await currentBranch(cwd);
+  const prompt = buildBranchPrompt({
+    stat: diff.stat.trim(),
+    diffBody: truncateDiff(diff.body, config.maxDiffChars),
+    currentBranch: current,
+    examples: await listBranches(cwd, 15),
+  });
+
+  const name = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      cancellable: true,
+      title: "Jazba: подбираю имя ветки…",
+    },
+    async (_progress, token) => {
+      const controller = new AbortController();
+      token.onCancellationRequested(() => controller.abort());
+      channel.appendLine("--- branch prompt ---");
+      channel.appendLine(prompt);
+      const raw = await runClaude(buildClaudeInvocation(config), {
+        input: prompt,
+        timeoutMs: config.timeoutMs,
+        cwd,
+        signal: controller.signal,
+        onDebug: (line) => channel.appendLine(line),
+      });
+      return sanitizeBranchName(raw);
+    },
+  );
+
+  if (!name) {
+    void vscode.window.showWarningMessage("Jazba: модель не вернула пригодного имени ветки.");
+    return;
+  }
+  if (name === current) {
+    void vscode.window.showInformationMessage(`Jazba: вы уже на ветке «${name}».`);
+    return;
+  }
+
+  const exists = await branchExists(cwd, name);
+  const upstream = await hasUpstream(cwd);
+  const action = exists ? "Переключиться на существующую ветку" : "Создать ветку";
+  const pullNote = upstream ? " Перед этим выполнится git pull." : "";
+  const answer = await vscode.window.showInformationMessage(
+    `Jazba: ${action} «${name}»?${pullNote}`,
+    "✓",
+    "✗",
+  );
+  if (answer !== "✓") {
+    return;
+  }
+
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: `Jazba: переход на ветку «${name}»…` },
+    async () => {
+      if (upstream) {
+        channel.appendLine("$ git pull");
+        channel.appendLine(await pull(cwd));
+      } else {
+        channel.appendLine("у текущей ветки нет upstream — git pull пропущен");
+      }
+      const args = exists ? `checkout ${name}` : `checkout -b ${name}`;
+      channel.appendLine(`$ git ${args}`);
+      channel.appendLine(await checkoutBranch(cwd, name, !exists));
+    },
+  );
+  void vscode.window.showInformationMessage(`Jazba: вы на ветке «${name}».`);
 }
 
 /**

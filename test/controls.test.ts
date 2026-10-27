@@ -22,11 +22,12 @@ test("languageLabel passes an unknown language through unchanged", () => {
 
 const fullState = { language: "russian", style: "auto", length: "medium" };
 
-test("describeControlRows returns generate / language / style / length / log rows", () => {
+test("describeControlRows returns generate / branch / language / style / length / log rows", () => {
   assert.deepEqual(
     describeControlRows(fullState).map((r) => r.command),
     [
       "jazba.generate",
+      "jazba.suggestBranch",
       "jazba.pickLanguage",
       "jazba.pickStyle",
       "jazba.pickLength",
@@ -36,17 +37,17 @@ test("describeControlRows returns generate / language / style / length / log row
 });
 
 test("the language row label reflects the current language", () => {
-  assert.equal(describeControlRows({ ...fullState, language: "russian" })[1].label, "Язык: Русский");
-  assert.equal(describeControlRows({ ...fullState, language: "english" })[1].label, "Язык: English");
+  assert.equal(describeControlRows({ ...fullState, language: "russian" })[2].label, "Язык: Русский");
+  assert.equal(describeControlRows({ ...fullState, language: "english" })[2].label, "Язык: English");
 });
 
 test("the style row label reflects the current style", () => {
   assert.equal(
-    describeControlRows({ ...fullState, style: "conventional" })[2].label,
+    describeControlRows({ ...fullState, style: "conventional" })[3].label,
     "Стиль: Conventional Commits",
   );
 });
 
 test("the length row label reflects the current length", () => {
-  assert.equal(describeControlRows({ ...fullState, length: "long" })[3].label, "Длина: подробно");
+  assert.equal(describeControlRows({ ...fullState, length: "long" })[4].label, "Длина: подробно");
 });

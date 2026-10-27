@@ -51,6 +51,12 @@
         }
       },
       {
+        "command": "jazba.suggestBranch",
+        "title": "Предложить имя ветки по изменениям",
+        "category": "Jazba",
+        "icon": "$(git-branch)"
+      },
+      {
         "command": "jazba.pickLanguage",
         "title": "Выбрать язык сообщения",
         "category": "Jazba"
@@ -76,11 +82,18 @@
         {
           "command": "jazba.generate",
           "group": "navigation"
+        },
+        {
+          "command": "jazba.suggestBranch",
+          "group": "navigation"
         }
       ],
       "commandPalette": [
         {
           "command": "jazba.generate"
+        },
+        {
+          "command": "jazba.suggestBranch"
         },
         {
           "command": "jazba.pickLanguage"
