@@ -40,6 +40,29 @@ export function buildBranchPrompt(input: BranchPromptInput): string {
 }
 
 /**
+ * Проверяет имя ветки, введённое пользователем, по правилам `git check-ref-format --branch`.
+ * Возвращает текст ошибки или `undefined`, если имя допустимо. Регистр не ограничивает.
+ */
+export function branchNameError(name: string): string | undefined {
+  if (name === "") {
+    return "Введите имя ветки.";
+  }
+  if (/[\s~^:?*[\\\x00-\x1f\x7f]/.test(name)) {
+    return "Недопустимые символы: пробелы и ~ ^ : ? * [ \\";
+  }
+  if (name.includes("..") || name.includes("@{") || name === "@") {
+    return "Нельзя использовать «..», «@{» и имя «@».";
+  }
+  if (name.startsWith("-") || name.startsWith("/") || name.endsWith("/") || name.endsWith(".")) {
+    return "Имя не может начинаться с «-» или «/» и заканчиваться на «/» или «.».";
+  }
+  if (name.split("/").some((s) => s === "" || s.startsWith(".") || s.endsWith(".lock"))) {
+    return "Сегменты пути не могут быть пустыми, начинаться с «.» или заканчиваться на «.lock».";
+  }
+  return undefined;
+}
+
+/**
  * Приводит ответ модели к допустимому имени ветки (см. `git check-ref-format`):
  * берёт первую непустую строку, убирает обрамление, пробелы заменяет дефисами,
  * выбрасывает запрещённые символы, чистит каждый сегмент пути.

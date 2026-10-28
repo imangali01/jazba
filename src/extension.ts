@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import { buildBranchPrompt, sanitizeBranchName } from "./branch";
+import { branchNameError, buildBranchPrompt, sanitizeBranchName } from "./branch";
 import { buildClaudeInvocation, ClaudeError, runClaude } from "./claude";
 import { readConfig } from "./config";
 import { ControlsProvider, pickLanguage, pickLength, pickStyle } from "./controls-view";
@@ -187,26 +187,15 @@ async function runSuggestBranch(repository: GitRepository): Promise<void> {
     void vscode.window.showWarningMessage("Jazba: модель не вернула пригодного имени ветки.");
     return;
   }
-  if (name === current) {
-    void vscode.window.showInformationMessage(`Jazba: вы уже на ветке «${name}».`);
-    return;
-  }
-
-  const exists = await branchExists(cwd, name);
   const upstream = await hasUpstream(cwd);
-  const action = exists ? "Переключиться на существующую ветку" : "Создать ветку";
-  const pullNote = upstream ? " Перед этим выполнится git pull." : "";
-  const answer = await vscode.window.showInformationMessage(
-    `Jazba: ${action} «${name}»?${pullNote}`,
-    "✓",
-    "✗",
-  );
-  if (answer !== "✓") {
+  const chosen = await editBranchName(name, current, upstream);
+  if (!chosen) {
     return;
   }
 
+  const exists = await branchExists(cwd, chosen);
   await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: `Jazba: переход на ветку «${name}»…` },
+    { location: vscode.ProgressLocation.Notification, title: `Jazba: переход на ветку «${chosen}»…` },
     async () => {
       if (upstream) {
         channel.appendLine("$ git pull");
@@ -214,12 +203,58 @@ async function runSuggestBranch(repository: GitRepository): Promise<void> {
       } else {
         channel.appendLine("у текущей ветки нет upstream — git pull пропущен");
       }
-      const args = exists ? `checkout ${name}` : `checkout -b ${name}`;
+      const args = exists ? `checkout ${chosen}` : `checkout -b ${chosen}`;
       channel.appendLine(`$ git ${args}`);
-      channel.appendLine(await checkoutBranch(cwd, name, !exists));
+      channel.appendLine(await checkoutBranch(cwd, chosen, !exists));
     },
   );
-  void vscode.window.showInformationMessage(`Jazba: вы на ветке «${name}».`);
+  void vscode.window.showInformationMessage(`Jazba: вы на ветке «${chosen}».`);
+}
+
+/**
+ * Поле ввода с предложенным именем: его можно поправить, затем «✓» (или Enter)
+ * подтверждает, «✗» (или Esc) отменяет. Возвращает итоговое имя или `undefined`.
+ */
+function editBranchName(
+  suggested: string,
+  current: string | undefined,
+  upstream: boolean,
+): Promise<string | undefined> {
+  const accept: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon("check"), tooltip: "✓ Создать ветку" };
+  const cancel: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon("close"), tooltip: "✗ Отмена" };
+
+  const box = vscode.window.createInputBox();
+  box.title = "Jazba: имя новой ветки";
+  box.value = suggested;
+  box.prompt = upstream
+    ? "Поправьте имя при необходимости. ✓ / Enter — git pull и git checkout -b, ✗ / Esc — отмена."
+    : "Поправьте имя при необходимости. ✓ / Enter — git checkout -b (upstream нет, без pull), ✗ / Esc — отмена.";
+  box.buttons = [accept, cancel];
+
+  const validate = (value: string): string | undefined =>
+    value.trim() === current ? "Вы уже на этой ветке." : branchNameError(value.trim());
+  box.validationMessage = validate(box.value);
+
+  return new Promise((resolve) => {
+    let result: string | undefined;
+    const tryAccept = (): void => {
+      const value = box.value.trim();
+      if (validate(value) === undefined) {
+        result = value;
+        box.hide();
+      }
+    };
+    box.onDidChangeValue((value) => {
+      box.validationMessage = validate(value);
+    });
+    box.onDidAccept(tryAccept);
+    box.onDidTriggerButton((button) => (button === accept ? tryAccept() : box.hide()));
+    box.onDidHide(() => {
+      box.dispose();
+      resolve(result);
+    });
+    box.show();
+  });
 }
 
 /**

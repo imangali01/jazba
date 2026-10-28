@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildBranchPrompt, sanitizeBranchName } from "../src/branch";
+import { branchNameError, buildBranchPrompt, sanitizeBranchName } from "../src/branch";
 
 test("sanitizeBranchName leaves a clean name untouched", () => {
   assert.equal(sanitizeBranchName("feat/branch-suggestion"), "feat/branch-suggestion");
@@ -51,4 +51,16 @@ test("buildBranchPrompt omits optional sections when absent", () => {
   const prompt = buildBranchPrompt({ stat: "s", diffBody: "d" });
   assert.doesNotMatch(prompt, /Текущая ветка/);
   assert.doesNotMatch(prompt, /Существующие ветки/);
+});
+
+test("branchNameError accepts typical names, including uppercase", () => {
+  for (const name of ["feat/login", "JIRA-123-fix", "release/1.2.0", "user/me/try_it"]) {
+    assert.equal(branchNameError(name), undefined, name);
+  }
+});
+
+test("branchNameError rejects names git refuses", () => {
+  for (const name of ["", "feat login", "a..b", "a@{b", "@", "-x", "x/", "x.", "a//b", "a/.b", "x.lock", "a:b", "a~b"]) {
+    assert.notEqual(branchNameError(name), undefined, JSON.stringify(name));
+  }
 });
